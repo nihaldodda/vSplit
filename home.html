@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vSplit</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- QRCode & Tesseract libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.0/dist/tesseract.min.js"></script>
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="header">
+    <div class="container">
+      <h1 class="header__title">vSplit</h1>
+      <div class="header__nav">
+        <button class="btn btn--outline btn--sm" onclick="switchView('admin')" id="adminBtn">Admin</button>
+        <button class="btn btn--outline btn--sm" onclick="switchView('member')" id="memberBtn">Member</button>
+        <button class="btn btn--outline btn--sm" onclick="switchView('dashboard')" id="dashboardBtn">Status</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== Admin Dashboard View ========== -->
+  <div id="adminView" class="view">
+    <div class="container">
+      <div class="view__header">
+        <h2>Admin Dashboard</h2>
+        <p class="text-secondary">Upload bill and manage group members</p>
+      </div>
+
+      <!-- Bill Upload Section -->
+      <div class="card mb-24">
+        <div class="card__body">
+          <h3 class="mb-16">📋 Upload Bill</h3>
+          <div class="upload-options">
+            <div class="upload-method">
+              <button class="btn btn--primary upload-btn" onclick="document.getElementById('fileInput').click()">📁 Choose File</button>
+              <p class="text-secondary text-sm">Select from gallery</p>
+            </div>
+            <div class="upload-method">
+              <button class="btn btn--primary upload-btn" onclick="document.getElementById('cameraInput').click()">📸 Take Photo</button>
+              <p class="text-secondary text-sm">Use camera</p>
+            </div>
+          </div>
+          <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
+          <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileUpload(event)">
+          <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📋</div>
+            <p>Or drag and drop your bill here</p>
+            <p class="text-secondary text-sm">Supported: JPG, PNG, WebP (up to 15MB for better OCR)</p>
+            <p class="text-secondary text-sm">💡 <strong>Tip:</strong> For best results, ensure clear lighting and text is readable</p>
+          </div>
+          <div id="imagePreview" class="image-preview hidden">
+            <h4 class="mb-16">📸 Bill Preview</h4>
+            <div class="preview-container">
+              <img id="previewImage" alt="Bill preview" />
+              <div class="preview-actions">
+                <button class="btn btn--secondary" onclick="clearPreview()">❌ Cancel</button>
+                <button class="btn btn--primary" onclick="processBillWithOCR()">🤖 Process the bill</button>
+              </div>
+            </div>
+          </div>
+          <div id="ocrProgress" class="ocr-progress hidden">
+            <div class="progress-header">
+              <h4>🤖 Processing the bill</h4>
+              <div class="progress-percentage" id="progressPercentage">0%</div>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="ocrProgressFill"></div>
+            </div>
+            <p class="progress-status" id="progressStatus">Initializing enhanced OCR engine...</p>
+            <div class="progress-details">
+              <p class="text-sm text-secondary">🔍 Using advanced text recognition for bill items</p>
+              <p class="text-sm text-secondary">💰 Detecting prices in multiple formats (₹, Rs, INR)</p>
+              <p class="text-sm text-secondary">🏷️ Auto-categorizing food, drinks, and desserts</p>
+            </div>
+            <div class="progress-actions">
+              <button class="btn btn--outline btn--sm" onclick="cancelOCR()">Cancel</button>
+              <button class="btn btn--secondary btn--sm" onclick="useFallbackData()" id="fallbackBtn">Use Sample Data</button>
+            </div>
+          </div>
+          <div id="ocrError" class="ocr-error hidden">
+            <div class="error-content">
+              <div class="error-icon">⚠️</div>
+              <h4>Enhanced OCR Processing Issue</h4>
+              <p id="errorMessage">Unable to process the image. Please try again with better lighting or use sample data.</p>
+              <div class="ocr-tips">
+                <h5>💡 Tips for better OCR results:</h5>
+                <ul>
+                  <li>📸 Ensure good lighting and avoid shadows</li>
+                  <li>📋 Make sure text is clear and not blurry</li>
+                  <li>🔍 Take photo straight-on (avoid angles)</li>
+                  <li>📱 Use higher resolution if available</li>
+                </ul>
+              </div>
+              <div class="error-actions">
+                <button class="btn btn--primary" onclick="retryOCR()">🔄 Retry Enhanced OCR</button>
+                <button class="btn btn--secondary" onclick="useFallbackData()">📋 Use Sample Data</button>
+                <button class="btn btn--outline" onclick="clearPreview()">❌ Upload Different Image</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Extracted Bill Items -->
+      <div id="billItemsSection" class="card mb-24 hidden">
+        <div class="card__body">
+          <div class="flex justify-between items-center mb-16">
+            <h3>✅ Extracted Bill Items</h3>
+            <div class="bill-info"><span class="status status--success" id="billNumber">Bill Processed</span></div>
+          </div>
+          <div class="ocr-results-info">
+            <p class="text-sm text-secondary mb-16">🤖 Items extracted using enhanced OCR</p>
+          </div>
+          <div class="table-container">
+            <table class="items-table">
+              <thead><tr><th>Item</th><th>Type</th><th>Rate</th><th>Amount</th></tr></thead>
+              <tbody id="billItemsList"></tbody>
+            </table>
+          </div>
+          <div class="bill-totals">
+            <div class="total-row"><span>Subtotal:</span><span id="subtotalAmount"></span></div>
+            <div class="total-row"><span>Tax:</span><span id="taxAmount"></span></div>
+            <div class="total-row"><span>Tip:</span><span id="tipAmount"></span></div>
+            <div class="total-row total-final"><span>Total:</span><span id="totalAmount"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member Management -->
+      <div class="card mb-24">
+        <div class="card__body">
+          <h3 class="mb-16">👥 Group Members</h3>
+          <div class="member-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Member Name</label>
+                <input type="text" class="form-control" id="memberName" placeholder="Enter name">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Member UPI ID</label>
+                <input type="text" class="form-control" id="adminUpiId" placeholder="e.g., admin@upi">
+              </div>
+              <div class="form-group">
+                <label class="form-label">&nbsp;</label>
+                <button class="btn btn--primary" onclick="addMember()">➕ Add Member</button>
+              </div>
+            </div>
+          </div>
+          <div class="members-list" id="membersList">
+            <div class="empty-state"><p class="text-secondary">No members added yet. Add members to start splitting the bill.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate Share Link Section -->
+      <div id="generateLinkSection" class="card mb-24 hidden">
+        <div class="card__body">
+          <div class="share-prompt">
+            <h3 class="mb-16">🚀 Ready to Share!</h3>
+            <p class="text-secondary mb-16">Your bill is processed and members are added. Generate a shareable link so members can select their items and pay via UPI.</p>
+            <button class="btn btn--primary btn--lg btn--full-width" onclick="generateAndShowShareLink()">🔗 Generate Share Link</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Share Link Display Section -->
+      <div id="shareLinkSection" class="card mb-24 hidden">
+        <div class="card__body">
+          <h3 class="mb-16">📤 Share with Members</h3>
+          <div class="share-link-display">
+            <div class="share-link-container">
+              <input type="text" class="form-control" id="shareLink" readonly>
+              <button class="btn btn--primary" onclick="copyShareLink()">📋 Copy</button>
+            </div>
+            <div class="share-link-info">
+              <p class="text-secondary text-sm">Send this link to group members so they can join</p>
+              <div class="session-info"><span class="status status--info">Session ID: <span id="sessionId"></span></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Tracking -->
+      <div id="paymentTrackingSection" class="card hidden">
+        <div class="card__body">
+          <h3 class="mb-16">💰 UPI Payment Status</h3>
+          <p class="text-sm text-secondary mb-16">Track member payments and toggle QR code visibility</p>
+          <div class="payment-grid" id="paymentGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Member Selection View ========== -->
+  <div id="memberView" class="view hidden">
+    <div class="container">
+      <div class="view__header">
+        <h2>🛒 Select Your Items</h2>
+        <div id="memberSessionInfo" class="session-info-banner hidden">
+          <p>Joining session: <strong id="joinSessionId"></strong></p>
+          <p class="text-sm">Items extracted using enhanced OCR technology</p>
+        </div>
+      </div>
+      <div class="card mb-24">
+        <div class="card__body">
+          <div class="form-group">
+            <label class="form-label">Select Your Name</label>
+            <select class="form-control" id="memberSelector" onchange="selectMember()">
+              <option value="">Choose your name...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="itemSelectionSection" class="hidden">
+        <div class="card mb-24">
+          <div class="card__body">
+            <h3 class="mb-16">🍽️ Available Items</h3>
+            <p class="text-sm text-secondary mb-16">Choose your items</p>
+            <div class="items-grid" id="itemsGrid"></div>
+          </div>
+        </div>
+        <div class="card mb-24">
+          <div class="card__body">
+            <div class="total-summary">
+              <div class="total-row"><span>Selected Items:</span><span id="selectedItemsTotal">₹0.00</span></div>
+              <div class="total-row"><span>Tax Share:</span><span id="taxShare">₹0.00</span></div>
+              <div class="total-row"><span>Tip Share:</span><span id="tipShare">₹0.00</span></div>
+              <div class="total-row total-final"><span>Your Total:</span><span id="memberTotal">₹0.00</span></div>
+            </div>
+            <button class="btn btn--primary btn--full-width" onclick="confirmSelection()">✅ Confirm Selection & Pay via UPI</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+    <div id="groupHistoryPage" style="display:none;">
+    <h2>Group History</h2>
+    <button onclick="app.showMainPage()">Back</button>
+    <ul id="groupHistoryList"></ul>
+  </div>
+
+
+  <!-- ========== UPI Payment View ========== -->
+  <div id="paymentView" class="view hidden">
+    <div class="container">
+      <div class="view__header">
+        <h2>💳 UPI Payment</h2>
+        <p class="text-secondary">Scan QR code to pay your share via UPI</p>
+      </div>
+      <div class="payment-container">
+        <div class="card">
+          <div class="card__body text-center">
+            <div class="payment-amount">
+              <h3>Your Amount</h3>
+              <div class="amount-display" id="paymentAmount">₹0.00</div>
+            </div>
+            <div id="qrCodeContainer" class="qr-container">
+              <canvas id="qrCanvas"></canvas>
+              <p class="text-secondary mt-16">Scan with any UPI payment app</p>
+              <p class="text-sm text-secondary">QR code will disappear once admin confirms payment</p>
+            </div>
+            <div id="paymentComplete" class="payment-complete hidden">
+              <div class="success-icon">✅</div>
+              <h4>Payment Confirmed!</h4>
+              <p class="text-secondary">Thank you for your UPI payment</p>
+            </div>
+            <div class="payment-methods">
+              <p class="text-secondary mb-12">Supported UPI payment methods:</p>
+              <div class="payment-icons">
+                <span class="payment-icon">📱 UPI</span>
+                <span class="payment-icon">💳 Google Pay</span>
+                <span class="payment-icon">💸 Paytm</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== Status Dashboard View ========== -->
+  <div id="dashboardView" class="view hidden">
+    <div class="container">
+      <div class="view__header">
+        <h2>📊 Payment Dashboard</h2>
+        <p class="text-secondary">Real-time UPI payment progress</p>
+      </div>
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card__body">
+            <h4>Payment Summary</h4>
+            <div class="summary-stats">
+              <div class="stat"><div class="stat-value" id="totalMembers">0</div><div class="stat-label">Total Members</div></div>
+              <div class="stat"><div class="stat-value" id="paidMembers">0</div><div class="stat-label">Paid via UPI</div></div>
+              <div class="stat"><div class="stat-value" id="pendingMembers">0</div><div class="stat-label">Pending</div></div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card__body">
+            <h4>Member Status</h4>
+            <div class="member-status-list" id="memberStatusList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Processing your bill with enhanced OCR...</p>
+    </div>
+  </div>
+  <div id="groupHistoryPage" style="display:none;">
+  <h2>Group History</h2>
+  <button onclick="app.showMainPage()">Back</button>
+  <ul id="groupHistoryList"></ul>
+</div>
+<button onclick="app.showGroupHistory()">View Group History</button>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ✅ Firebase + App scripts at the end -->
+  <script type="module">
+    import './firebase.js';  /* initializes Firebase and exports db */
+    import './app.js';       /* your app logic */
+  </script>
+</body>
+</html>

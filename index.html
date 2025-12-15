@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>vSplit - Splash</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #0a0a0a);
+      background-size: 400% 400%;
+      animation: gradientShift 12s ease infinite;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Currency rain */
+    .currency-rain {
+      position: absolute;
+      width: 100%;
+      height: 120%;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .currency {
+      position: absolute;
+      top: -60px;
+      font-size: 24px;
+      color: rgba(255,255,255,0.85);
+      animation: fall linear infinite;
+    }
+
+    /* Falling + drifting effect */
+    @keyframes fall {
+      0% {
+        transform: translateX(0) translateY(-60px) rotate(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: translateX(20px) translateY(50vh) rotate(180deg);
+        opacity: 0.9;
+      }
+      100% {
+        transform: translateX(-20px) translateY(110vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    /* Splash container */
+    .splash-container {
+      text-align: center;
+      opacity: 0;
+      z-index: 1;
+      position: relative;
+      animation: fadeIn 2s ease-in-out forwards;
+      animation-delay: 2s;
+    }
+    
+    h1 {
+      font-size: 3.5rem;
+      margin: 0;
+      text-shadow: 0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(118,75,162,0.6);
+      animation: glowPulse 2s infinite alternate;
+    }
+    p.tagline {
+      margin-top: 12px;
+      font-size: 1.4rem;
+      font-weight: 300;
+      letter-spacing: 1px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glowPulse {
+      from { text-shadow: 0 0 10px rgba(255,255,255,0.7), 0 0 20px rgba(118,75,162,0.5); }
+      to { text-shadow: 0 0 30px rgba(255,255,255,1), 0 0 60px rgba(118,75,162,1); }
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Currency rain -->
+  <div class="currency-rain" id="currencyRain"></div>
+
+  <!-- App splash content -->
+  <div class="splash-container">
+    <h1>vSplit</h1>
+    <p class="tagline">Scan, Split, Settle.</p>
+  </div>
+
+  <script>
+    // Currency symbols
+    const symbols = ["₹", "$", "€", "£", "¥", "₽", "₺", "₦"];
+    const container = document.getElementById("currencyRain");
+
+    // Generate raining currencies
+    for (let i = 0; i < 30; i++) {
+      const el = document.createElement("div");
+      el.classList.add("currency");
+      el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+
+      // random horizontal start position
+      el.style.left = Math.random() * 100 + "vw";
+      // random size
+      el.style.fontSize = Math.random() * 35 + 20 + "px"; 
+      // random fall duration
+      el.style.animationDuration = (Math.random() * 3 + 4) + "s";
+      // random delay
+      el.style.animationDelay = Math.random() * 5 + "s";
+
+      container.appendChild(el);
+    }
+
+    // Redirect after splash
+    setTimeout(() => {
+      document.body.style.transition = "opacity 1s";
+      document.body.style.opacity = "0";
+      setTimeout(() => {
+        window.location.href = "home.html";
+      }, 1000);
+    }, 6000);
+  </script>
+</body>
+</html>
