@@ -1,0 +1,12 @@
+# Node
+node_modules/
+
+# Environment variables
+.env
+
+# Google Cloud / Firebase secrets
+vsplit-*.json
+service-account*.json
+
+# OS / Editor
+.DS_Store
