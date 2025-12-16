@@ -3,8 +3,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/fireba
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-analytics.js";
 
+import dotenv from "dotenv";
 const firebaseConfig = {
-  apiKey: "AIzaSyC6W0hnVfReqcLojlH8jaUY3PZa37SzElw",
+  apiKey: "AIzaSyC4ST7gLhlYKzmOTNLOA_J88oTw4i817kU",
   authDomain: "vsplit1-b2ed3.firebaseapp.com",
   projectId: "vsplit1-b2ed3",
   storageBucket: "vsplit1-b2ed3.firebasestorage.app",
